@@ -13,5 +13,6 @@ check:
 test:
 	poetry run pytest ./tests -vv
 
-run-app:
-	poetry run streamlit run ./run_app.py
+demo:
+	poetry run streamlit run ./demo.py
+
