@@ -1,0 +1,78 @@
+import os
+import subprocess
+import pandas as pd
+import torch
+from ogb.nodeproppred import PygNodePropPredDataset
+from torch_geometric.transforms import RandomLinkSplit
+from torch_geometric.loader import LinkNeighborLoader
+from torch_geometric.data import Data
+
+
+class OGBNLinkPredDataset:
+    def __init__(
+        self, root_dir: str = "data", val_size: float = 0.1, test_size: float = 0.2
+    ):
+        self._base_dataset = PygNodePropPredDataset(name="ogbn-arxiv", root=root_dir)
+        self.data = self._base_dataset[0]
+        self.root = self._base_dataset.root
+        self.num_features = self._base_dataset.num_features
+
+        self._download_abstracts()
+        self.corpus = self._load_corpus()
+
+        self.train_data, self.val_data, self.test_data = self._split_data(
+            val_size, test_size
+        )
+
+    def _download_abstracts(self):
+        target_dir = os.path.join(self.root, "mapping")
+        tsv_path = os.path.join(target_dir, "titleabs.tsv")
+        if not os.path.exists(tsv_path):
+            print("Downloading title and abstract information...")
+            gz_path = tsv_path + ".gz"
+            url = "https://snap.stanford.edu/ogb/data/misc/ogbn_arxiv/titleabs.tsv.gz"
+            os.makedirs(target_dir, exist_ok=True)
+            subprocess.run(
+                ["wget", "-P", target_dir, url], check=True, capture_output=True
+            )
+            subprocess.run(["gunzip", gz_path], check=True)
+            print(f"File downloaded and extracted to: {tsv_path}")
+        else:
+            print("Title and abstract file already exists.")
+
+    def _load_corpus(self) -> list[str]:
+        tsv_path = os.path.join(self.root, "mapping", "titleabs.tsv")
+        try:
+            df_text = pd.read_csv(
+                tsv_path,
+                sep="\t",
+                header=None,
+                names=["paper_id", "title", "abstract"],
+                lineterminator="\n",
+                low_memory=False,
+            )
+            df_text_aligned = df_text.reset_index(drop=True)
+            corpus = (
+                df_text_aligned["title"].fillna("")
+                + "\n "
+                + df_text_aligned["abstract"].fillna("")
+            ).tolist()
+            print(f"Corpus created with {len(corpus)} documents.")
+            return corpus
+        except FileNotFoundError:
+            print("Error: titleabs.tsv not found. Could not create corpus.")
+            return []
+
+    def _split_data(self, val_size: float, test_size: float) -> tuple[Data, Data, Data]:
+        transform = RandomLinkSplit(
+            num_val=val_size,
+            num_test=test_size,
+            is_undirected=False,
+            add_negative_train_samples=False,
+        )
+        train_split, val_split, test_split = transform(self.data)
+        print("Data successfully split into train, validation, and test sets.")
+        return train_split, val_split, test_split
+
+    def get_splits(self) -> tuple[Data, Data, Data]:
+        return self.train_data, self.val_data, self.test_data
