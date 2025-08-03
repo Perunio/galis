@@ -130,6 +130,7 @@ if __name__ == "__main__":
         )
         if val_auc > best_val_auc:
             print("New best")
+            torch.save(model.state_dict(), "model.pth")
 
     test_auc, test_acc = calc_metrics(test_loader)
 
