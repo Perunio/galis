@@ -10,7 +10,7 @@ from ogb.nodeproppred import PygNodePropPredDataset
 
 
 def copy_button_component(text_to_copy: str, button_text: str = "Copy to Clipboard"):
-    """Tworzy komponent HTML/JS z przyciskiem do kopiowania."""
+    """Creates a HTML/JS component with copy button."""
     escaped_text = json.dumps(text_to_copy)
 
     component = f"""
@@ -146,7 +146,7 @@ def demo():
                     st.session_state.raw_text_for_copy = ""
 
     with col2:
-        st.header("Related Work")
+        st.header("References")
 
         content = st.session_state.generated_text_md if st.session_state.generated_text_md else " "
         html_box = f"<div class='generated-box'>{content}</div>"
