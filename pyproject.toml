@@ -1,17 +1,39 @@
-[project]
+[tool.poetry]
 name = "galis"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "Perunio",email = "divodar@protonmail.com"}
-]
+authors = ["Perunio <divodar@protonmail.com>"]
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "ruff (>=0.12.2,<0.13.0)",
-    "pytest (>=8.4.1,<9.0.0)"
+packages = [{include = "galis"}]
+
+[tool.poetry.dependencies]
+python = ">=3.12, <3.13"
+
+torch = [
+    {version = "2.3.1+cu121", source = "pytorch-cuda", markers = "sys_platform == 'linux' or sys_platform == 'win32'"},
+    {version = "^2.3.1", source = "pytorch-cpu", markers = "sys_platform == 'darwin'"}
 ]
 
+ogb = "^1.3.6"
+torch-geometric = "^2.6.1"
+pandas = "^2.3.1"
+streamlit = "^1.46.1"
+numpy = "1.26.4"
+streamlit-extras = "^0.7.5"
+
+[[tool.poetry.source]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
