@@ -208,3 +208,7 @@ __marimo__/
 
 # data
 data
+dataset
+
+# saved models
+*.pth

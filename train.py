@@ -122,14 +122,15 @@ if __name__ == "__main__":
         loss = train(train_loader)
         val_auc, val_acc = calc_metrics(val_loader)
 
-        best_val_auc = val_auc
-        best_auc = val_auc
+
         print(
             f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Val AUC: {val_auc:.4f}, Val acc: {val_acc:.4f}",
             end=" ",
         )
         if val_auc > best_val_auc:
             print("New best")
+            best_val_auc = val_auc
+            best_auc = val_auc
             torch.save(model.state_dict(), "model.pth")
 
     test_auc, test_acc = calc_metrics(test_loader)

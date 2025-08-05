@@ -7,6 +7,10 @@ from torch_geometric.transforms import RandomLinkSplit
 from torch_geometric.loader import LinkNeighborLoader
 from torch_geometric.data import Data
 
+import requests
+import gzip
+import shutil
+
 
 class OGBNLinkPredDataset:
     def __init__(
@@ -27,16 +31,36 @@ class OGBNLinkPredDataset:
     def _download_abstracts(self):
         target_dir = os.path.join(self.root, "mapping")
         tsv_path = os.path.join(target_dir, "titleabs.tsv")
+
         if not os.path.exists(tsv_path):
             print("Downloading title and abstract information...")
             gz_path = tsv_path + ".gz"
             url = "https://snap.stanford.edu/ogb/data/misc/ogbn_arxiv/titleabs.tsv.gz"
             os.makedirs(target_dir, exist_ok=True)
-            subprocess.run(
-                ["wget", "-P", target_dir, url], check=True, capture_output=True
-            )
-            subprocess.run(["gunzip", gz_path], check=True)
-            print(f"File downloaded and extracted to: {tsv_path}")
+
+            try:
+                print(f"Downloading from {url}...")
+                response = requests.get(url, stream=True)
+                response.raise_for_status()
+                with open(gz_path, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                print(f"File downloaded to: {gz_path}")
+
+                print(f"Decompressing {gz_path}...")
+                with gzip.open(gz_path, 'rb') as f_in:
+                    with open(tsv_path, 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                print(f"File extracted to: {tsv_path}")
+
+                os.remove(gz_path)
+                print(f"Removed temporary file: {gz_path}")
+
+            except requests.exceptions.RequestException as e:
+                print(f"Error downloading file: {e}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
         else:
             print("Title and abstract file already exists.")
 
