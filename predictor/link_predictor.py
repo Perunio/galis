@@ -134,22 +134,17 @@ def prepare_system(model_path: Path):
 
 
 if __name__ == "__main__":
-    # Ustaw ścieżkę do swojego zapisanego, wytrenowanego modelu GCN
     MODEL_PATH = Path("model.pth")
 
-    # 1. Wywołaj KOSZTOWNĄ funkcję przygotowującą tylko RAZ
     gcn_model, st_model, dataset, z_all = prepare_system(MODEL_PATH)
 
-    # 2. Zdefiniuj nowy artykuł, dla którego szukasz cytowań
     my_title = "A Survey of Graph Neural Networks for Link Prediction"
     my_abstract = """Link predictor is a critical task in graph analysis. "
                    "In this paper, we review various GNN architectures like GCN and GraphSAGE for predicting edges.
                    """
 
-    # 3. Użyj SZYBKIEJ funkcji do konwersji tekstu na wektor
     new_vector = abstract_to_vector(my_title, my_abstract, st_model)
 
-    # 4. Użyj SZYBKIEJ funkcji do uzyskania predykcji
     probabilities = get_citation_predictions(
         vector=new_vector,
         model=gcn_model,
@@ -157,6 +152,5 @@ if __name__ == "__main__":
         num_nodes=dataset.data.num_nodes,
     )
 
-    # 5. Wyświetl wyniki
     references = format_top_k_predictions(probabilities, dataset, top_k=5)
     print(references)
