@@ -57,22 +57,39 @@ def load_data():
         "Optimizing distributed training of large-scale neural networks.",
         "A new method for natural language generation with stylistic control.",
         "Predicting protein structures using equivariant graph neural networks.",
-        "Bayesian optimization for hyperparameter tuning in machine learning models."
+        "Bayesian optimization for hyperparameter tuning in machine learning models.",
     ]
 
-    dataset = PygNodePropPredDataset(name='ogbn-arxiv', root='./dataset')
+    dataset = PygNodePropPredDataset(name="ogbn-arxiv", root="./data")
     data = dataset[0]
     node_labels_df = pd.DataFrame(
-        {'node_id': torch.arange(data.num_nodes).numpy(), 'label_id': data.y.squeeze().numpy()})
-    mapping_dir = os.path.join(dataset.root, 'mapping')
-    node_ids_df = pd.read_csv(os.path.join(mapping_dir, 'nodeidx2paperid.csv.gz'), compression='gzip', header=None,
-                              names=['node_id', 'paper_id'], dtype={'node_id': int, 'paper_id': str}, skiprows=1)
-    label_names_df = pd.read_csv(os.path.join(mapping_dir, 'labelidx2arxivcategeory.csv.gz'), compression='gzip',
-                                 header=None, names=['label_id', 'category_name'], skiprows=1)
-    merged_df = pd.merge(node_ids_df, node_labels_df, on='node_id')
-    full_df = pd.merge(merged_df, label_names_df, on='label_id')
+        {
+            "node_id": torch.arange(data.num_nodes).numpy(),
+            "label_id": data.y.squeeze().numpy(),
+        }
+    )
+    mapping_dir = os.path.join(dataset.root, "mapping")
+    node_ids_df = pd.read_csv(
+        os.path.join(mapping_dir, "nodeidx2paperid.csv.gz"),
+        compression="gzip",
+        header=None,
+        names=["node_id", "paper_id"],
+        dtype={"node_id": int, "paper_id": str},
+        skiprows=1,
+    )
+    label_names_df = pd.read_csv(
+        os.path.join(mapping_dir, "labelidx2arxivcategeory.csv.gz"),
+        compression="gzip",
+        header=None,
+        names=["label_id", "category_name"],
+        skiprows=1,
+    )
+    merged_df = pd.merge(node_ids_df, node_labels_df, on="node_id")
+    full_df = pd.merge(merged_df, label_names_df, on="label_id")
 
-    full_df['abstract'] = [random.choice(large_sample_abstracts) for _ in range(len(full_df))]
+    full_df["abstract"] = [
+        random.choice(large_sample_abstracts) for _ in range(len(full_df))
+    ]
 
     return full_df
 
@@ -80,7 +97,8 @@ def load_data():
 def demo():
     st.set_page_config(page_title="Related Work Generator", layout="wide")
 
-    st.markdown("""
+    st.markdown(
+        """
     <style>
         .block-container { padding-top: 2rem; padding-bottom: 2rem; }
         .stApp { background-color: #0E1117; }
@@ -104,10 +122,14 @@ def demo():
         .generated-box li { margin-bottom: 1.5em; line-height: 1.6; }
         .generated-box code { color: #81C784; background-color: transparent; }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
-    if 'generated_text_md' not in st.session_state: st.session_state.generated_text_md = ""
-    if 'raw_text_for_copy' not in st.session_state: st.session_state.raw_text_for_copy = ""
+    if "generated_text_md" not in st.session_state:
+        st.session_state.generated_text_md = ""
+    if "raw_text_for_copy" not in st.session_state:
+        st.session_state.raw_text_for_copy = ""
 
     papers_data = load_data()
     st.title("Galis")
@@ -115,10 +137,17 @@ def demo():
 
     with col1:
         st.header("Abstract")
-        abstract_input = st.text_area("", key="abstract_text", height=250, placeholder="Paste your abstract here",
-                                      label_visibility="collapsed")
+        abstract_input = st.text_area(
+            "",
+            key="abstract_text",
+            height=250,
+            placeholder="Paste your abstract here",
+            label_visibility="collapsed",
+        )
         st.write("Write or **Upload** Abstract Paper section.")
-        uploaded_file = st.file_uploader("Drag and drop file here", type=["txt"], help="Limit 200MB per file • TXT")
+        uploaded_file = st.file_uploader(
+            "Drag and drop file here", type=["txt"], help="Limit 200MB per file • TXT"
+        )
         st.write("")
 
         if st.button("Generate Related Work", use_container_width=True):
@@ -131,31 +160,47 @@ def demo():
                     raw_text_parts = []
 
                     for _, row in random_records.iterrows():
-                        category_str = f"arxiv {row['category_name'].lower().replace('-', ' ')}"
+                        category_str = (
+                            f"arxiv {row['category_name'].lower().replace('-', ' ')}"
+                        )
 
                         html_items.append(
-                            f"<li>Paper ID:<br>{row['paper_id']}<br><br>Category:<br>{category_str}<br><br>{row['abstract']}</li>")
+                            f"<li>Paper ID:<br>{row['paper_id']}<br><br>Category:<br>{category_str}<br><br>{row['abstract']}</li>"
+                        )
 
                         raw_text_parts.append(
-                            f"Paper ID: {row['paper_id']}\nCategory: {category_str}\n\n{row['abstract']}")
+                            f"Paper ID: {row['paper_id']}\nCategory: {category_str}\n\n{row['abstract']}"
+                        )
 
-                    st.session_state.generated_text_md = f"<ul>{''.join(html_items)}</ul>"
-                    st.session_state.raw_text_for_copy = "\n\n---\n\n".join(raw_text_parts)
+                    st.session_state.generated_text_md = (
+                        f"<ul>{''.join(html_items)}</ul>"
+                    )
+                    st.session_state.raw_text_for_copy = "\n\n---\n\n".join(
+                        raw_text_parts
+                    )
                 else:
-                    st.session_state.generated_text_md = "Could not fetch random records."
+                    st.session_state.generated_text_md = (
+                        "Could not fetch random records."
+                    )
                     st.session_state.raw_text_for_copy = ""
 
     with col2:
         st.header("References")
 
-        content = st.session_state.generated_text_md if st.session_state.generated_text_md else " "
+        content = (
+            st.session_state.generated_text_md
+            if st.session_state.generated_text_md
+            else " "
+        )
         html_box = f"<div class='generated-box'>{content}</div>"
         st.markdown(html_box, unsafe_allow_html=True)
 
         if st.session_state.raw_text_for_copy:
             st.write("")
-            copy_button_component(st.session_state.raw_text_for_copy, "Copy All Related Work")
+            copy_button_component(
+                st.session_state.raw_text_for_copy, "Copy All Related Work"
+            )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     demo()

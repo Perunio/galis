@@ -16,3 +16,5 @@ test:
 demo:
 	poetry run streamlit run ./demo.py
 
+run-app:
+	poetry run streamlit run ./galis_app.py
