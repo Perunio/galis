@@ -3,8 +3,8 @@ import numpy as np
 from torch_geometric.loader import LinkNeighborLoader
 from sklearn.metrics import roc_auc_score, accuracy_score
 from tqdm import tqdm
-from model import SimpleGCN
-from dataset import OGBNLinkPredDataset
+from model.simple_gcn_model import SimpleGCN
+from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset
 
 
 BATCH_SIZE = 128
@@ -61,12 +61,12 @@ criterion = torch.nn.BCEWithLogitsLoss()
 
 
 # training
-def train(train_loader):
+def train(train_loader, epoch):
     model.train()
     total_loss = 0
     scaler = torch.GradScaler()
 
-    pbar = tqdm(train_loader, desc="Training")
+    pbar = tqdm(train_loader, desc=f"Training Epoch: {epoch}")
     for batch in pbar:
         batch = batch.to(DEVICE)
         optimizer.zero_grad()
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     best_val_auc = 0
     best_auc = 0
     for epoch in range(1, NUM_EPOCHS + 1):
-        loss = train(train_loader)
+        loss = train(train_loader, epoch)
         val_auc, val_acc = calc_metrics(val_loader)
 
 

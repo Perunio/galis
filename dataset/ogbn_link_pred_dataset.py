@@ -1,5 +1,4 @@
 import os
-import subprocess
 import pandas as pd
 import torch
 from ogb.nodeproppred import PygNodePropPredDataset

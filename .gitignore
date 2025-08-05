@@ -208,7 +208,7 @@ __marimo__/
 
 # data
 data
-dataset
+predictor/data
 
 # saved models
 *.pth
