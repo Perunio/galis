@@ -10,6 +10,9 @@ format:
 check:
 	poetry run ruff format --check .
 
+mypy:
+	poetry run mypy .
+
 test:
 	poetry run pytest ./tests -vv
 

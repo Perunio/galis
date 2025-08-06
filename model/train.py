@@ -1,11 +1,21 @@
+# import torch
+# import numpy as np
+# from typing import Tuple
+# from torch_geometric.loader import LinkNeighborLoader # type: ignore
+# from sklearn.metrics import roc_auc_score, accuracy_score # type: ignore
+# from tqdm import tqdm # type: ignore
+# from model.simple_gcn_model import SimpleGCN
+# from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset
+
 import torch
 import numpy as np
-from torch_geometric.loader import LinkNeighborLoader
-from sklearn.metrics import roc_auc_score, accuracy_score
-from tqdm import tqdm
-from model.simple_gcn_model import SimpleGCN
-from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset
+from typing import Tuple
+from torch_geometric.loader import LinkNeighborLoader  # type: ignore
+from sklearn.metrics import roc_auc_score, accuracy_score  # type: ignore
+from tqdm import tqdm  # type: ignore
 
+from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset
+from model.simple_gcn_model import SimpleGCN
 
 BATCH_SIZE = 128
 NUM_EPOCHS = 20
@@ -61,7 +71,7 @@ criterion = torch.nn.BCEWithLogitsLoss()
 
 
 # training
-def train(train_loader, epoch):
+def train(train_loader: LinkNeighborLoader, epoch: int) -> float:
     model.train()
     total_loss = 0
     scaler = torch.GradScaler()
@@ -89,7 +99,7 @@ def train(train_loader, epoch):
 
 
 @torch.no_grad()
-def calc_metrics(loader):
+def calc_metrics(loader: LinkNeighborLoader) -> Tuple[float, float]:
     model.eval()
     all_scores = []
     all_labels = []
@@ -110,14 +120,16 @@ def calc_metrics(loader):
     all_scores = np.concatenate(all_scores)
     all_labels = np.concatenate(all_labels)
 
-    return roc_auc_score(all_labels, all_scores), accuracy_score(
-        all_labels, all_scores > 0.5
-    )
+    auc = roc_auc_score(all_labels, all_scores)
+    acc = accuracy_score(all_labels, all_scores > 0.5)
+
+    return auc, acc
 
 
 if __name__ == "__main__":
-    best_val_auc = 0
-    best_auc = 0
+    best_val_auc = 0.0
+    best_auc = 0.0
+
     for epoch in range(1, NUM_EPOCHS + 1):
         loss = train(train_loader, epoch)
         val_auc, val_acc = calc_metrics(val_loader)

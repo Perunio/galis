@@ -22,6 +22,8 @@ transformers = "4.39.3"
 ruff = "^0.12.7"
 structlog = "^25.4.0"
 mypy = "^1.17.1"
+pandas-stubs = "^2.3.0.250703"
+types-requests = "^2.32.4.20250611"
 
 [[tool.poetry.source]]
 name = "pytorch"
