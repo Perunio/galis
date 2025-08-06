@@ -24,6 +24,10 @@ sentence-transformers = "2.7.0"
 transformers = "4.39.3"
 ruff = "^0.12.7"
 structlog = "^25.4.0"
+langchain-google-genai = "^2.1.9"
+langchain-core = "^0.3.72"
+langchain = "^0.3.27"
+python-dotenv = "^1.1.1"
 
 [[tool.poetry.source]]
 name = "pytorch-cuda"
