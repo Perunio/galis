@@ -210,5 +210,6 @@ __marimo__/
 data
 predictor/data
 
-# saved models
+
+# model
 *.pth
