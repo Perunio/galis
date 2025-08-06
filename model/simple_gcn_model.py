@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv # type: ignore
+from torch_geometric.nn import GCNConv  # type: ignore
 
 
 class EdgeDecoder(torch.nn.Module):

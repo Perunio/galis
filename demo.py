@@ -6,7 +6,7 @@ import random
 import torch
 import json
 from streamlit.components.v1 import html
-from ogb.nodeproppred import PygNodePropPredDataset # type: ignore
+from ogb.nodeproppred import PygNodePropPredDataset  # type: ignore
 
 
 def copy_button_component(text_to_copy: str, button_text: str = "Copy to Clipboard"):

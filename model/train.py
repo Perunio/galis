@@ -134,7 +134,6 @@ if __name__ == "__main__":
         loss = train(train_loader, epoch)
         val_auc, val_acc = calc_metrics(val_loader)
 
-
         print(
             f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Val AUC: {val_auc:.4f}, Val acc: {val_acc:.4f}",
             end=" ",

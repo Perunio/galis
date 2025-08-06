@@ -5,17 +5,18 @@ from typing import List, Tuple
 
 import pandas as pd
 import requests
-import torch
-from ogb.nodeproppred import PygNodePropPredDataset # type: ignore
-from torch_geometric.data import Data # type: ignore
-from torch_geometric.transforms import RandomLinkSplit # type: ignore
+from ogb.nodeproppred import PygNodePropPredDataset  # type: ignore
+from torch_geometric.data import Data  # type: ignore
+from torch_geometric.transforms import RandomLinkSplit  # type: ignore
 
 
 class OGBNLinkPredDataset:
     def __init__(
         self, root_dir: str = "data", val_size: float = 0.1, test_size: float = 0.2
     ):
-        self._base_dataset: PygNodePropPredDataset = PygNodePropPredDataset(name="ogbn-arxiv", root=root_dir)
+        self._base_dataset: PygNodePropPredDataset = PygNodePropPredDataset(
+            name="ogbn-arxiv", root=root_dir
+        )
         self.data: Data = self._base_dataset[0]
         self.root: str = self._base_dataset.root
         self.num_features: int = self._base_dataset.num_features
@@ -47,8 +48,8 @@ class OGBNLinkPredDataset:
                 print(f"File downloaded to: {gz_path}")
 
                 print(f"Decompressing {gz_path}...")
-                with gzip.open(gz_path, 'rb') as f_in:
-                    with open(tsv_path, 'wb') as f_out:
+                with gzip.open(gz_path, "rb") as f_in:
+                    with open(tsv_path, "wb") as f_out:
                         shutil.copyfileobj(f_in, f_out)
                 print(f"File extracted to: {tsv_path}")
 
@@ -82,7 +83,7 @@ class OGBNLinkPredDataset:
             ).tolist()
             print(f"Corpus created with {len(corpus)} documents.")
             return corpus
-        
+
         except FileNotFoundError:
             print("Error: titleabs.tsv not found. Could not create corpus.")
             return []

@@ -2,7 +2,7 @@ from pathlib import Path
 import torch
 import structlog
 
-from sentence_transformers import SentenceTransformer # type: ignore
+from sentence_transformers import SentenceTransformer  # type: ignore
 from model.simple_gcn_model import SimpleGCN
 from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset
 
@@ -50,7 +50,10 @@ def get_citation_predictions(
 
 
 def format_top_k_predictions(
-    probs: torch.Tensor, dataset: OGBNLinkPredDataset, top_k: int =10, show_prob: bool =False
+    probs: torch.Tensor,
+    dataset: OGBNLinkPredDataset,
+    top_k: int = 10,
+    show_prob: bool = False,
 ) -> str:
     """
     Formats the top K predictions into a single string for display.
@@ -72,7 +75,7 @@ def format_top_k_predictions(
     output_lines.append(header)
 
     for i in range(top_k):
-        paper_idx = int(top_indices[i].item()) # top_indices[i].item()
+        paper_idx = int(top_indices[i].item())  # top_indices[i].item()
         prob = top_probs[i].item()
         paper_info = dataset.corpus[paper_idx]
         paper_title = paper_info.split("\n")[0]
