@@ -66,22 +66,18 @@ def check_api_key():
 def create_related_work_pipeline():
     """Creates a ready-to-use pipeline for generating the Related Work section."""
 
-    # Model Gemini
     llm = ChatGoogleGenerativeAI(
         model="gemini-1.5-flash",
         temperature=0.3
     )
 
-    # Prompt template
     prompt = PromptTemplate(
         input_variables=["citations"],
         template=PROMPT_TEXT
     )
 
-    # Parser
     parser = StrOutputParser()
 
-    # Chain
     chain = prompt | llm | parser
 
     return chain
@@ -104,7 +100,6 @@ def generate_related_work(citations_text: str) -> str:
 
 if __name__ == "__main__":
 
-    # Twoje cytacje - możesz wkleić tutaj lub przekazać jako parametr
     my_citations = """
 Top 5 Citation Predictions:
   - Title: 'deterministic construction of rip matrices in compressed sensing from constant weight codes'
