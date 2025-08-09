@@ -1,9 +1,5 @@
-import sys
 from pathlib import Path
 import streamlit as st
-
-project_root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(project_root))
 
 from predictor.link_predictor import (
     prepare_system,
@@ -11,6 +7,7 @@ from predictor.link_predictor import (
     abstract_to_vector,
     format_top_k_predictions,
 )
+from llm.related_work_generator import generate_related_work
 
 MODEL_PATH = Path("predictor/model.pth")
 
@@ -24,25 +21,36 @@ def app():
     st.set_page_config(page_title="Galis", layout="wide")
     st.title("Galis")
 
+    if "references" not in st.session_state:
+        st.session_state.references = None
+    if "related_work" not in st.session_state:
+        st.session_state.related_work = None
+    if "abstract_title" not in st.session_state:
+        st.session_state.abstract_title = ""
+    if "abstract_text" not in st.session_state:
+        st.session_state.abstract_text = ""
+
     gcn_model, st_model, dataset, z_all = load_prediction_system(MODEL_PATH)
 
     col1, col2 = st.columns(2, gap="large")
 
+    with col2:
+        references_placeholder = st.empty()
+        related_work_placeholder = st.empty()
+
     with col1:
         st.header("Abstract Title")
-        if "abstract_title" not in st.session_state:
-            st.session_state.abstract_title = ""
         abstract_title = st.text_input(
             "Paste your title here",
+            st.session_state.abstract_title,
             key="abstract_title_input",
             label_visibility="collapsed",
         )
 
         st.header("Abstract Text")
-        if "abstract_text" not in st.session_state:
-            st.session_state.abstract_text = ""
         abstract_input = st.text_area(
             "Paste your abstract here",
+            st.session_state.abstract_text,
             key="abstract_text_input",
             height=100,
             label_visibility="collapsed",
@@ -73,33 +81,51 @@ def app():
             help="Choose how many paper suggestions you want to see.",
         )
 
-        if st.button("Suggest References", type="primary"):
+        if st.button("Suggest References and related work", type="primary"):
             if not abstract_title.strip() or not abstract_input.strip():
                 st.warning("Please provide both a title and an abstract.")
             else:
-                with col2:
-                    with st.spinner("Analyzing abstract and predicting references..."):
-                        new_vector = abstract_to_vector(
-                            abstract_input, abstract_title, st_model
-                        )
+                st.session_state.references = None
+                st.session_state.related_work = None
+                references_placeholder.empty()
+                related_work_placeholder.empty()
 
-                        probabilities = get_citation_predictions(
-                            vector=new_vector,
-                            model=gcn_model,
-                            z_all=z_all,
-                            num_nodes=dataset.data.num_nodes,
-                        )
+                with st.spinner("Analyzing abstract and predicting references..."):
+                    new_vector = abstract_to_vector(
+                        abstract_input, abstract_title, st_model
+                    )
+                    probabilities = get_citation_predictions(
+                        vector=new_vector,
+                        model=gcn_model,
+                        z_all=z_all,
+                        num_nodes=dataset.data.num_nodes,
+                    )
+                    references = format_top_k_predictions(
+                        probabilities, dataset, top_k=num_citations
+                    )
+                    st.session_state.references = references
 
-                        references = format_top_k_predictions(
-                            probabilities, dataset, top_k=num_citations
-                        )
+                with references_placeholder.container():
+                    st.header("Suggested References")
+                    with st.container(height=200):
+                        st.markdown(st.session_state.references)
 
-                        st.session_state.references = references
+                with related_work_placeholder.container():
+                    with st.spinner("Generating related work section..."):
+                        related_work = generate_related_work(st.session_state.references)
+                        st.session_state.related_work = related_work
 
-    with col2:
-        st.header("Suggested References")
-        if "references" in st.session_state:
-            st.markdown(f"```\n{st.session_state.references}\n```")
+    if st.session_state.references:
+        with references_placeholder.container():
+            st.header("Suggested References")
+            with st.container(height=200):
+                st.markdown(st.session_state.references)
+
+    if st.session_state.related_work:
+        with related_work_placeholder.container():
+            st.header("Suggested Related Works")
+            with st.container(height=200):
+                st.markdown(st.session_state.related_work)
 
 
 if __name__ == "__main__":
