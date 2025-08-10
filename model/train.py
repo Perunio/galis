@@ -30,48 +30,6 @@ else:
 dataset.data.x = embeddings
 train_data, val_data, test_data = dataset.get_splits()
 
-# sanity checks
-import numpy as np
-
-
-def edge_set(edge_index):
-    a = edge_index.cpu().numpy()
-    return set((int(u), int(v)) for u, v in zip(a[0], a[1]))
-
-
-train_pos = edge_set(train_data.edge_label_index[:, train_data.edge_label == 1])
-val_pos = edge_set(val_data.edge_label_index[:, val_data.edge_label == 1])
-test_pos = edge_set(test_data.edge_label_index[:, test_data.edge_label == 1])
-
-print("train_pos", len(train_pos))
-print("val_pos", len(val_pos))
-print("test_pos", len(test_pos))
-print("train∩val", len(train_pos & val_pos))
-print("train∩test", len(train_pos & test_pos))
-print("val∩test", len(val_pos & test_pos))
-
-
-def to_tuples(edge_index):
-    a = edge_index.cpu().numpy()
-    return set((int(u), int(v)) for u, v in zip(a[0], a[1]))
-
-
-global_train_edges = to_tuples(train_data.edge_index)
-overlap = sum(1 for e in val_pos if e in global_train_edges)
-print("val positives present in train.edge_index:", overlap)
-
-
-print(train_data.edge_label.shape, train_data.edge_label.unique())
-print(val_data.edge_label.shape, val_data.edge_label.unique())
-
-
-pos_count = int((train_data.edge_label == 1).sum())
-neg_count = int((train_data.edge_label == 0).sum())
-print(f"Positives: {pos_count}, Negatives: {neg_count}")
-
-# end of sanity check
-
-
 train_loader = LinkNeighborLoader(
     train_data,
     num_neighbors=[-1, -1],  # Use all neighbors
