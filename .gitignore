@@ -213,3 +213,5 @@ predictor/data
 
 # model
 *.pth
+
+mlruns/

@@ -1,11 +1,13 @@
 import torch
 import numpy as np
 from torch_geometric.loader import LinkNeighborLoader
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score, average_precision_score
+import mlflow
 from tqdm import tqdm
 from model.simple_gcn_model import SimpleGCN
 from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset
-
+from sentence_transformers import SentenceTransformer
+from pathlib import Path
 
 BATCH_SIZE = 128
 NUM_EPOCHS = 20
@@ -14,12 +16,66 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # data
 dataset = OGBNLinkPredDataset(val_size=0.1, test_size=0.2)
+
+if Path("model/embeddings.pth").exists():
+    embeddings = torch.load("model/embeddings.pth")
+else:
+    st_model = SentenceTransformer("bongsoo/kpf-sbert-128d-v1", device=DEVICE)
+    texts = dataset.corpus
+    embeddings = st_model.encode(
+        texts, convert_to_tensor=True, show_progress_bar=True, device=DEVICE
+    )
+    torch.save(embeddings, "model/embeddings.pth")
+
+dataset.data.x = embeddings
 train_data, val_data, test_data = dataset.get_splits()
+
+# sanity checks
+import numpy as np
+
+
+def edge_set(edge_index):
+    a = edge_index.cpu().numpy()
+    return set((int(u), int(v)) for u, v in zip(a[0], a[1]))
+
+
+train_pos = edge_set(train_data.edge_label_index[:, train_data.edge_label == 1])
+val_pos = edge_set(val_data.edge_label_index[:, val_data.edge_label == 1])
+test_pos = edge_set(test_data.edge_label_index[:, test_data.edge_label == 1])
+
+print("train_pos", len(train_pos))
+print("val_pos", len(val_pos))
+print("test_pos", len(test_pos))
+print("train∩val", len(train_pos & val_pos))
+print("train∩test", len(train_pos & test_pos))
+print("val∩test", len(val_pos & test_pos))
+
+
+def to_tuples(edge_index):
+    a = edge_index.cpu().numpy()
+    return set((int(u), int(v)) for u, v in zip(a[0], a[1]))
+
+
+global_train_edges = to_tuples(train_data.edge_index)
+overlap = sum(1 for e in val_pos if e in global_train_edges)
+print("val positives present in train.edge_index:", overlap)
+
+
+print(train_data.edge_label.shape, train_data.edge_label.unique())
+print(val_data.edge_label.shape, val_data.edge_label.unique())
+
+
+pos_count = int((train_data.edge_label == 1).sum())
+neg_count = int((train_data.edge_label == 0).sum())
+print(f"Positives: {pos_count}, Negatives: {neg_count}")
+
+# end of sanity check
+
 
 train_loader = LinkNeighborLoader(
     train_data,
     num_neighbors=[-1, -1],  # Use all neighbors
-    neg_sampling_ratio=1.0,  # 1 negative sample per positive edge
+    neg_sampling_ratio=0.0,
     edge_label_index=train_data.edge_label_index,
     edge_label=train_data.edge_label,
     batch_size=BATCH_SIZE,
@@ -30,7 +86,7 @@ train_loader = LinkNeighborLoader(
 val_loader = LinkNeighborLoader(
     val_data,
     num_neighbors=[-1, -1],
-    neg_sampling_ratio=0.0,  # RandomLinkSplit already added negative edges
+    neg_sampling_ratio=0.0,
     edge_label_index=val_data.edge_label_index,
     edge_label=val_data.edge_label,
     batch_size=BATCH_SIZE,
@@ -74,6 +130,7 @@ def train(train_loader, epoch):
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=True):
             z = model(batch.x, batch.edge_index)
             out = model.decode(z, batch.edge_label_index)
+            # out = model.decode(batch.x, batch.edge_label_index)
             labels = batch.edge_label.float()
 
             loss = criterion(out, labels)
@@ -86,6 +143,11 @@ def train(train_loader, epoch):
         pbar.set_postfix(loss=f"{loss.item():.4f}")
 
     return total_loss / len(train_loader)
+
+
+def precision_at_k(y_true, y_scores, k):
+    idx = np.argsort(y_scores)[::-1][:k]
+    return np.mean(y_true[idx])
 
 
 @torch.no_grad()
@@ -110,30 +172,59 @@ def calc_metrics(loader):
     all_scores = np.concatenate(all_scores)
     all_labels = np.concatenate(all_labels)
 
-    return roc_auc_score(all_labels, all_scores), accuracy_score(
-        all_labels, all_scores > 0.5
-    )
+    roc = roc_auc_score(all_labels, all_scores)
+    ap = average_precision_score(all_labels, all_scores)
+    p_at_10 = precision_at_k(all_labels, all_scores, 10)
+
+    return roc, ap, p_at_10
 
 
 if __name__ == "__main__":
-    best_val_auc = 0
-    best_auc = 0
+    mlflow.start_run()
+    best_val_ap = 0
+
+    # metrics before training
+    roc, ap, p_at_10 = calc_metrics(val_loader)
+    mlflow.log_metrics(
+        {
+            "loss": 0.0,
+            "val_roc_auc": roc,
+            "val_avg_precision": ap,
+            "val_precision_at_10": p_at_10,
+        },
+        step=0,
+    )
+
     for epoch in range(1, NUM_EPOCHS + 1):
         loss = train(train_loader, epoch)
-        val_auc, val_acc = calc_metrics(val_loader)
+        roc, ap, p_at_10 = calc_metrics(val_loader)
 
+        mlflow.log_metrics(
+            {
+                "loss": loss,
+                "val_roc_auc": roc,
+                "val_avg_precision": ap,
+                "val_precision_at_10": p_at_10,
+            },
+            step=epoch,
+        )
 
         print(
-            f"Epoch: {epoch:03d}, Loss: {loss:.4f}, Val AUC: {val_auc:.4f}, Val acc: {val_acc:.4f}",
-            end=" ",
+            f"Epoch: {epoch:03d}, Loss: {loss:.4f}, "
+            f"Val ROC-AUC: {roc:.4f}, Val AP: {ap:.4f}, P@10: {p_at_10:.4f}",
         )
-        if val_auc > best_val_auc:
-            print("New best")
-            best_val_auc = val_auc
-            best_auc = val_auc
+
+        if ap > best_val_ap:
+            best_val_ap = ap
+            print("New best AP - checkpoint saved")
             torch.save(model.state_dict(), "model.pth")
+        else:
+            print()
 
-    test_auc, test_acc = calc_metrics(test_loader)
+    mlflow.end_run()
 
+    test_roc, test_ap, test_p_at_10 = calc_metrics(test_loader)
     print("-" * 30)
-    print(f"Best validation AUC: {best_auc:.4f}")
+    print(f"Test AUC ROC: {test_roc:.4f}")
+    print(f"Test Avg Precission: {test_ap:.4f}")
+    print(f"Test Precission@10: {test_p_at_10:.4f}")

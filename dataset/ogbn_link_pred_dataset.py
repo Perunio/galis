@@ -47,8 +47,8 @@ class OGBNLinkPredDataset:
                 print(f"File downloaded to: {gz_path}")
 
                 print(f"Decompressing {gz_path}...")
-                with gzip.open(gz_path, 'rb') as f_in:
-                    with open(tsv_path, 'wb') as f_out:
+                with gzip.open(gz_path, "rb") as f_in:
+                    with open(tsv_path, "wb") as f_out:
                         shutil.copyfileobj(f_in, f_out)
                 print(f"File extracted to: {tsv_path}")
 
@@ -91,7 +91,7 @@ class OGBNLinkPredDataset:
             num_val=val_size,
             num_test=test_size,
             is_undirected=False,
-            add_negative_train_samples=False,
+            add_negative_train_samples=True,
         )
         train_split, val_split, test_split = transform(self.data)
         print("Data successfully split into train, validation, and test sets.")
