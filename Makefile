@@ -18,3 +18,9 @@ demo:
 
 run-app:
 	poetry run streamlit run ./galis_app.py
+
+docker-build:
+	docker build -t galis-app .
+
+docker-run:
+	docker run -p 7860:7860 --env-file .env galis-app

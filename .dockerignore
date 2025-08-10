@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+.git
+node_modules
+.env
+README.md
+Dockerfile
+
+# data folder
+data
+predictor/data
+model/data
+dataset/data
