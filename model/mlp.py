@@ -25,7 +25,7 @@ USE_CUSTOM_NEG = args.custom_neg
 USE_BERT_EMBED = args.bert_embed
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE = 2048
-NUM_EPOCHS = 10
+NUM_EPOCHS = 50
 
 # --- Load dataset + frozen embeddings ---
 if USE_CUSTOM_NEG:
@@ -114,9 +114,14 @@ def evaluate(data):
 
 
 # --- Train ---
+best_roc, best_ap = 0.0, 0.0
 for epoch in range(NUM_EPOCHS):
     loss = run_epoch(train_data, train=True)
     val_roc, val_ap = evaluate(val_data)
+    if val_roc > best_roc:
+        torch.save(
+            model.state_dict(), f"model_roc{str(val_roc)[:4].replace('.', '_')}.pth"
+        )
     print(
         f"Epoch {epoch + 1} | Loss {loss:.4f} | Val ROC {val_roc:.4f} | Val AP {val_ap:.4f}"
     )

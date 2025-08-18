@@ -1,7 +1,7 @@
 from pathlib import Path
 import streamlit as st
 
-from predictor.link_predictor import (
+from temp import (
     prepare_system,
     get_citation_predictions,
     abstract_to_vector,
@@ -9,7 +9,7 @@ from predictor.link_predictor import (
 )
 from llm.related_work_generator import generate_related_work
 
-MODEL_PATH = Path("predictor/model.pth")
+MODEL_PATH = Path("model_roc0_90.pth")
 
 
 @st.cache_resource
@@ -112,7 +112,9 @@ def app():
 
                 with related_work_placeholder.container():
                     with st.spinner("Generating related work section..."):
-                        related_work = generate_related_work(st.session_state.references)
+                        related_work = generate_related_work(
+                            st.session_state.references
+                        )
                         st.session_state.related_work = related_work
 
     if st.session_state.references:
