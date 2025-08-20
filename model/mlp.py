@@ -6,7 +6,7 @@ import numpy as np
 from dataset.ogbn_link_pred_dataset import (
     OGBNLinkPredDataset,
     OGBNLinkPredNegDataset,
-    OGBNLinkPredNegDataset2,
+    # OGBNLinkPredNegDataset2,
 )
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
