@@ -1,6 +1,6 @@
 from pathlib import Path
 import streamlit as st
-
+import torch.nn.functional as F
 from predictor.link_predictor import (
     prepare_system,
     get_citation_predictions,
@@ -94,8 +94,9 @@ def app():
                     new_vector = abstract_to_vector(
                         abstract_input, abstract_title, st_model
                     )
+
                     probabilities = get_citation_predictions(
-                        vector=new_vector,
+                        vector=F.normalize(new_vector.view(1, -1), p=2, dim=1),
                         model=gcn_model,
                         z_all=z_all,
                         num_nodes=dataset.data.num_nodes,

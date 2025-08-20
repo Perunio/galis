@@ -32,7 +32,6 @@ def parse_args():
 def edge_features(emb, ei):
     u, v = ei
     eu, ev = emb[u], emb[v]
-    print(eu.shape, ev.shape)
     return torch.cat([eu * ev, torch.abs(eu - ev)], dim=1)
 
 
