@@ -1,7 +1,7 @@
 from pathlib import Path
 import streamlit as st
 
-from temp import (
+from predictor.link_predictor import (
     prepare_system,
     get_citation_predictions,
     abstract_to_vector,
@@ -9,7 +9,7 @@ from temp import (
 )
 from llm.related_work_generator import generate_related_work
 
-MODEL_PATH = Path("model_roc0_90.pth")
+MODEL_PATH = Path("model.pth")
 
 
 @st.cache_resource

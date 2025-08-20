@@ -12,6 +12,10 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import argparse
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+BATCH_SIZE = 2048
+NUM_EPOCHS = 50
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -24,42 +28,11 @@ def parse_args():
     return parser.parse_args()
 
 
-args = parse_args()
-USE_CUSTOM_NEG = args.custom_neg
-USE_BERT_EMBED = args.bert_embed
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-BATCH_SIZE = 2048
-NUM_EPOCHS = 50
-
-# TODO: passing BERT embeds arg to dataset before
-# --- Load dataset + frozen embeddings ---
-if USE_CUSTOM_NEG:
-    print("using hard negatives")
-    dataset = OGBNLinkPredNegDataset2(val_size=0.1, test_size=0.2)
-else:
-    print("using random negatives")
-    dataset = OGBNLinkPredDataset(val_size=0.1, test_size=0.2)
-if USE_BERT_EMBED:
-    print("using BERT embeds")
-    if Path("model/embeddings.pth").exists():
-        emb = torch.load("model/embeddings.pth", map_location=DEVICE)
-    else:
-        st = SentenceTransformer("bongsoo/kpf-sbert-128d-v1", device=DEVICE)
-        emb = st.encode(dataset.corpus, convert_to_tensor=True, show_progress_bar=True)
-        Path("model").mkdir(parents=True, exist_ok=True)
-        torch.save(emb, "model/embeddings.pth")
-    emb = emb.to(DEVICE)
-else:
-    print("using skipgram embeds")
-    emb = dataset.data.x
-
-train_data, val_data, test_data = dataset.get_splits()
-
-
 # --- Feature builder ---
 def edge_features(emb, ei):
     u, v = ei
     eu, ev = emb[u], emb[v]
+    print(eu.shape, ev.shape)
     return torch.cat([eu * ev, torch.abs(eu - ev)], dim=1)
 
 
@@ -73,10 +46,6 @@ class PairMLP(nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         return self.fc2(x).squeeze(-1)
-
-
-model = PairMLP(emb.size(1) * 2).to(DEVICE)
-opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
 
 
 # --- Training loop ---
@@ -118,19 +87,52 @@ def evaluate(data):
     return roc_auc_score(y_true, y_scores), average_precision_score(y_true, y_scores)
 
 
-# --- Train ---
-best_roc, best_ap = 0.0, 0.0
-for epoch in range(NUM_EPOCHS):
-    loss = run_epoch(train_data, train=True)
-    val_roc, val_ap = evaluate(val_data)
-    if val_roc > best_roc:
-        torch.save(
-            model.state_dict(), f"model_roc{str(val_roc)[:4].replace('.', '_')}.pth"
-        )
-    print(
-        f"Epoch {epoch + 1} | Loss {loss:.4f} | Val ROC {val_roc:.4f} | Val AP {val_ap:.4f}"
-    )
+if __name__ == "__main__":
+    args = parse_args()
+    USE_CUSTOM_NEG = args.custom_neg
+    USE_BERT_EMBED = args.bert_embed
 
-# --- Final test ---
-test_roc, test_ap = evaluate(test_data)
-print(f"Test ROC {test_roc:.4f} | Test AP {test_ap:.4f}")
+    # --- Load dataset + frozen embeddings ---
+    if USE_CUSTOM_NEG:
+        print("using hard negatives")
+        dataset = OGBNLinkPredNegDataset(val_size=0.1, test_size=0.2)
+    else:
+        print("using random negatives")
+        dataset = OGBNLinkPredDataset(val_size=0.1, test_size=0.2)
+    if USE_BERT_EMBED:
+        print("using BERT embeds")
+        if Path("model/embeddings.pth").exists():
+            emb = torch.load("model/embeddings.pth", map_location=DEVICE)
+        else:
+            st = SentenceTransformer("bongsoo/kpf-sbert-128d-v1", device=DEVICE)
+            emb = st.encode(
+                dataset.corpus, convert_to_tensor=True, show_progress_bar=True
+            )
+            Path("model").mkdir(parents=True, exist_ok=True)
+            torch.save(emb, "model/embeddings.pth")
+        emb = emb.to(DEVICE)
+    else:
+        print("using skipgram embeds")
+        emb = dataset.data.x
+
+    train_data, val_data, test_data = dataset.get_splits()
+
+    model = PairMLP(emb.size(1) * 2).to(DEVICE)
+    opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+
+    # --- Training ---
+    best_roc, best_ap = 0.0, 0.0
+    for epoch in range(NUM_EPOCHS):
+        loss = run_epoch(train_data, train=True)
+        val_roc, val_ap = evaluate(val_data)
+        if val_roc > best_roc:
+            torch.save(
+                model.state_dict(), f"model_roc{str(val_roc)[:4].replace('.', '_')}.pth"
+            )
+        print(
+            f"Epoch {epoch + 1} | Loss {loss:.4f} | Val ROC {val_roc:.4f} | Val AP {val_ap:.4f}"
+        )
+
+    # --- Final test ---
+    test_roc, test_ap = evaluate(test_data)
+    print(f"Test ROC {test_roc:.4f} | Test AP {test_ap:.4f}")
