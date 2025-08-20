@@ -3,7 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
-from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset, OGBNLinkPredNegDataset
+from dataset.ogbn_link_pred_dataset import (
+    OGBNLinkPredDataset,
+    OGBNLinkPredNegDataset,
+    OGBNLinkPredNegDataset2,
+)
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import argparse
@@ -27,10 +31,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE = 2048
 NUM_EPOCHS = 50
 
+# TODO: passing BERT embeds arg to dataset before
 # --- Load dataset + frozen embeddings ---
 if USE_CUSTOM_NEG:
     print("using hard negatives")
-    dataset = OGBNLinkPredNegDataset(val_size=0.1, test_size=0.2)
+    dataset = OGBNLinkPredNegDataset2(val_size=0.1, test_size=0.2)
 else:
     print("using random negatives")
     dataset = OGBNLinkPredDataset(val_size=0.1, test_size=0.2)
@@ -43,7 +48,7 @@ if USE_BERT_EMBED:
         emb = st.encode(dataset.corpus, convert_to_tensor=True, show_progress_bar=True)
         Path("model").mkdir(parents=True, exist_ok=True)
         torch.save(emb, "model/embeddings.pth")
-    emb = F.normalize(emb.to(DEVICE), p=2, dim=1)
+    emb = emb.to(DEVICE)
 else:
     print("using skipgram embeds")
     emb = dataset.data.x
@@ -84,7 +89,8 @@ def run_epoch(data, train=True):
         else torch.arange(data.edge_label.size(0))
     )
     for i in range(0, len(idx), BATCH_SIZE):
-        batch_idx = idx[i : i + BATCH_SIZE]
+        batch_end = min(i + BATCH_SIZE, data.edge_label.size(0))
+        batch_idx = idx[i:batch_end]
         feats = edge_features(emb, data.edge_label_index[:, batch_idx]).to(DEVICE)
         labels = data.edge_label[batch_idx].float().to(DEVICE)
         scores = model(feats)
@@ -101,9 +107,8 @@ def run_epoch(data, train=True):
 def evaluate(data):
     scores_all, labels_all = [], []
     for i in range(0, data.edge_label.size(0), BATCH_SIZE):
-        feats = edge_features(emb, data.edge_label_index[:, i : i + BATCH_SIZE]).to(
-            DEVICE
-        )
+        batch_end = min(i + BATCH_SIZE, data.edge_label.size(0))
+        feats = edge_features(emb, data.edge_label_index[:, i:batch_end]).to(DEVICE)
         labels = data.edge_label[i : i + BATCH_SIZE]
         scores = torch.sigmoid(model(feats)).cpu().numpy()
         scores_all.append(scores)
