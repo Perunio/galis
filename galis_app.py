@@ -1,6 +1,6 @@
 from pathlib import Path
 import streamlit as st
-
+import torch.nn.functional as F
 from predictor.link_predictor import (
     prepare_system,
     get_citation_predictions,
@@ -9,7 +9,7 @@ from predictor.link_predictor import (
 )
 from llm.related_work_generator import generate_related_work
 
-MODEL_PATH = Path("predictor/model.pth")
+MODEL_PATH = Path("model.pth")
 
 
 @st.cache_resource
@@ -94,8 +94,9 @@ def app():
                     new_vector = abstract_to_vector(
                         abstract_input, abstract_title, st_model
                     )
+
                     probabilities = get_citation_predictions(
-                        vector=new_vector,
+                        vector=F.normalize(new_vector.view(1, -1), p=2, dim=1),
                         model=gcn_model,
                         z_all=z_all,
                         num_nodes=dataset.data.num_nodes,
@@ -112,7 +113,9 @@ def app():
 
                 with related_work_placeholder.container():
                     with st.spinner("Generating related work section..."):
-                        related_work = generate_related_work(st.session_state.references)
+                        related_work = generate_related_work(
+                            st.session_state.references
+                        )
                         st.session_state.related_work = related_work
 
     if st.session_state.references:
