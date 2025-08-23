@@ -16,11 +16,17 @@ logger = structlog.get_logger()
 load_dotenv()
 
 PROMPT_TEXT = """
-You are a research assistant AI specializing in academic writing. Your task is to generate a "Related Work" section 
-for a research paper. You will be given a list of citations.
+You are a research assistant specializing in academic writing. Your task is to generate a "Related Work" section 
+for a research paper. You will be given paper's title, abstract and a list of citations.
 
 Your goal is to synthesize the provided citations into a coherent and well-structured "Related Work" section that 
 contextualizes the user's project within the existing academic literature.
+
+**PROVIDED TITLE**
+{title}
+
+**PROVIDED ABSTRACT**
+{abstract}**
 
 **PROVIDED CITATIONS:**
 {citations}
@@ -49,8 +55,12 @@ work introduces...", or "Building upon the foundation laid by [Author, Year], we
 transitions between paragraphs and ideas to create a coherent narrative that logically leads the reader to understand 
 the novelty and importance of the user's project.
 
-6.  **Output Format:** Generate only the text for the "Related Work" section. Do not include headers like 
-"INSTRUCTIONS" or "PROVIDED CITATIONS" in the final output. The entire response should be the section text itself.
+6.  **Domain Sensitivity:** Adapt the discussion to the specific research domain indicated by the title and abstract. 
+Use appropriate terminology and focus on concepts, methods, and challenges relevant to that particular field of study.
+
+7.  **Output Format:** Generate only the text for the "Related Work" section. Do not include headers like 
+"INSTRUCTIONS," "PAPER TITLE," or "PROVIDED CITATIONS" in the final output. The entire response should be the 
+section text itself, ready to be inserted into an academic paper.
 """
 
 
@@ -67,12 +77,12 @@ def create_related_work_pipeline():
     """Creates a ready-to-use pipeline for generating the Related Work section."""
 
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
+        model="gemini-2.0-flash-exp",
         temperature=0.3
     )
 
     prompt = PromptTemplate(
-        input_variables=["citations"],
+        input_variables=["title", "abstract", "citations"],
         template=PROMPT_TEXT
     )
 
@@ -83,24 +93,42 @@ def create_related_work_pipeline():
     return chain
 
 
-def generate_related_work(citations_text: str) -> str:
+def generate_related_work(title:str, abstract:str, citations_text: str) -> str:
     """
-    Main function - pass citations, get Related Work
+    Main function - pass title, abstract, and citations, get Related Work
 
     Args:
+        title: The paper's title
+        abstract: The paper's abstract
         citations_text: Text with citations (can be a list or a string)
 
     Returns:
         The generated Related Work section
     """
     pipeline = create_related_work_pipeline()
-    result = pipeline.invoke({"citations": citations_text})
+    result = pipeline.invoke({
+        "title": title,
+        "abstract": abstract,
+        "citations": citations_text
+    })
     return result
 
 
 if __name__ == "__main__":
+    title = "Privacy-Preserving Data Analysis in Distributed Systems: A Comprehensive Framework"
 
-    my_citations = """
+    abstract = """
+    This paper presents a novel framework for privacy-preserving data analysis in distributed computing environments. 
+    We propose a hybrid approach that combines differential privacy mechanisms with secure multi-party computation 
+    to enable statistical analysis while maintaining strong privacy guarantees. Our framework addresses key challenges 
+    in distributed data processing, including data heterogeneity, communication overhead, and scalability constraints. 
+    Through extensive experiments on real-world datasets, we demonstrate that our approach achieves comparable accuracy 
+    to centralized methods while providing provable privacy protection. The proposed system shows significant improvements 
+    in computational efficiency compared to existing privacy-preserving solutions, making it practical for large-scale 
+    deployment in enterprise environments.
+    """
+
+    citations = """
 Top 5 Citation Predictions:
   - Title: 'deterministic construction of rip matrices in compressed sensing from constant weight codes'
   - Title: 'mizar items exploring fine grained dependencies in the mizar mathematical library'
@@ -109,16 +137,15 @@ Top 5 Citation Predictions:
   - Title: 'anonymization with worst case distribution based background knowledge'
     """
 
-    print("Generuję Related Work...")
-    print("=" * 50)
+    print("Generating Related Work...")
+    print("-" * 50)
 
     try:
-        related_work = generate_related_work(my_citations)
+        related_work = generate_related_work(title, abstract, citations)
         print(related_work)
     except Exception as e:
-        print(f"Błąd: {e}")
-        print("\n=== INSTRUKCJE KONFIGURACJI ===")
-        print("1. Stwórz plik .env w tym samym folderze co skrypt")
-        print("2. Dodaj do niego linię: GOOGLE_API_KEY=twój_klucz")
-        print("3. Uzyskaj klucz na: https://makersuite.google.com/app/apikey")
+        print(f"Error: {e}")
+        print("1. Create a .env file in the same folder as the script")
+        print("2. Add the line: GOOGLE_API_KEY=your_key")
+        print("3. Get the key at: https://makersuite.google.com/app/apikey")
         check_api_key()
