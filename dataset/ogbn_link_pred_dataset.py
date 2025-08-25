@@ -1,5 +1,4 @@
 import os
-import torch.nn.functional as F
 import random
 from torch_sparse import SparseTensor
 import pandas as pd

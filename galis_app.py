@@ -116,7 +116,7 @@ def app():
                         related_work = generate_related_work(
                             st.session_state.abstract_title,
                             st.session_state.abstract_text,
-                            st.session_state.references
+                            st.session_state.references,
                         )
                         st.session_state.related_work = related_work
 
