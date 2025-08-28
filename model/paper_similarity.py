@@ -5,12 +5,19 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from typing import List, Tuple
 import re
+import os
 
 
 class PaperSimilarityFinder:
     """Extension to find most similar papers based on title and abstract"""
 
-    def __init__(self, dataset, method="tfidf", model_name="all-MiniLM-L6-v2"):
+    def __init__(
+        self,
+        dataset,
+        method="tfidf",
+        model_name="all-MiniLM-L6-v2",
+        embeddings_cache_path=".",
+    ):
         """
         Initialize the similarity finder
 
@@ -18,10 +25,13 @@ class PaperSimilarityFinder:
             dataset: Your OGBNLinkPredDataset instance
             method: 'tfidf' or 'sentence_transformer'
             model_name: For sentence transformer method
+            embeddings_cache_path: Path to directory for caching embeddings
         """
         self.dataset = dataset
         self.method = method
         self.corpus = dataset.corpus
+        self.model_name = model_name
+        self.embeddings_cache_path = embeddings_cache_path
 
         self._load_citations()
 
@@ -56,7 +66,8 @@ class PaperSimilarityFinder:
     def _preprocess_text(text: str) -> str:
         """Basic text preprocessing"""
         text = re.sub(r"\s+", " ", text.strip())
-        return text.lower()
+        text = re.sub(r"\[\d+]", "", text)
+        return text
 
     def _setup_tfidf(self):
         """Setup TF-IDF vectorizer and compute corpus vectors"""
@@ -77,17 +88,32 @@ class PaperSimilarityFinder:
 
     def _setup_sentence_embeddings(self):
         """Setup sentence transformer and compute corpus embeddings"""
-        print("Computing sentence embeddings for corpus...")
 
-        batch_size = 100
-        embeddings = []
+        os.makedirs(self.embeddings_cache_path, exist_ok=True)
 
-        for i in range(0, len(self.corpus), batch_size):
-            batch = self.corpus[i : i + batch_size]
-            batch_embeddings = self.model.encode(batch, show_progress_bar=True)
-            embeddings.append(batch_embeddings)
+        cache_filename = f"corpus_embeddings_{self.model_name.replace('/', '_')}.npy"
+        cache_filepath = os.path.join(self.embeddings_cache_path, cache_filename)
 
-        self.corpus_embeddings = np.vstack(embeddings)
+        if os.path.exists(cache_filepath):
+            print(f"Loading sentence embeddings from cache: {cache_filepath}")
+            self.corpus_embeddings = np.load(cache_filepath)
+        else:
+            print("Computing sentence embeddings for corpus...")
+
+            batch_size = 100
+            embeddings = []
+
+            for i in range(0, len(self.corpus), batch_size):
+                batch = self.corpus[i : i + batch_size]
+                batch_embeddings = self.model.encode(batch, show_progress_bar=True)
+                embeddings.append(batch_embeddings)
+
+            self.corpus_embeddings = np.vstack(embeddings)
+
+            # Zapisujemy embeddingi do pliku cache
+            np.save(cache_filepath, self.corpus_embeddings)
+            print(f"Sentence embeddings computed and saved to cache: {cache_filepath}")
+
         print(f"Sentence embeddings complete. Shape: {self.corpus_embeddings.shape}")
 
     def find_similar_papers(
@@ -212,30 +238,36 @@ class PaperSimilarityFinder:
 if __name__ == "__main__":
     dataset = OGBNLinkPredDataset()
 
+    model_name = "all-mpnet-base-v2"
+    method = "sentence_transformer"
+    embeddings_dir = "embeddings_cache"
+
     similarity_finder = PaperSimilarityFinder(
-        dataset, method="tfidf"
+        dataset,
+        method=method,
+        model_name=model_name,
+        embeddings_cache_path=embeddings_dir,
     )
 
-    my_title = "Bucks for Buckets (B4B): Active Defenses Against Stealing Encoders"
+    my_title = "Polynomial Implicit Neural Representations For Large Diverse Datasets"
     my_abstract = """
-        Machine Learning as a Service (MLaaS) APIs provide ready-to-use and highutility 
-        encoders that generate vector representations for given inputs. Since these
-        encoders are very costly to train, they become lucrative targets for model stealing
-        attacks during which an adversary leverages query access to the API to replicate
-        the encoder locally at a fraction of the original training costs. We propose Bucks
-        for Buckets (B4B), the first active defense that prevents stealing while the attack is
-        happening without degrading representation quality for legitimate API users. Our
-        defense relies on the observation that the representations returned to adversaries
-        who try to steal the encoder’s functionality cover a significantly larger fraction
-        of the embedding space than representations of legitimate users who utilize the
-        encoder to solve a particular downstream task. B4B leverages this to adaptively
-        adjust the utility of the returned representations according to a user’s coverage of
-        the embedding space. To prevent adaptive adversaries from eluding our defense by
-        simply creating multiple user accounts (sybils), B4B also individually transforms
-        each user’s representations. This prevents the adversary from directly aggregating
-        representations over multiple accounts to create their stolen encoder copy. Our
-        active defense opens a new path towards securely sharing and democratizing
-        encoders over public APIs.
+        Implicit neural representations (INR) have gained significant popularity for signal and image representation for
+        many end-tasks, such as superresolution, 3D modeling, and
+        more. Most INR architectures rely on sinusoidal positional
+        encoding, which accounts for high-frequency information in
+        data. However, the finite encoding size restricts the model’s
+        representational power. Higher representational power is
+        needed to go from representing a single given image to representing large and diverse datasets. Our approach addresses
+        this gap by representing an image with a polynomial function
+        and eliminates the need for positional encodings. Therefore,
+        to achieve a progressively higher degree of polynomial representation, we use element-wise multiplications between
+        features and affine-transformed coordinate locations after
+        every ReLU layer. The proposed method is evaluated qualitatively and quantitatively on large datasets like ImageNet.
+        The proposed Poly-INR model performs comparably to stateof-the-art generative models without any convolution, 
+        normalization, or self-attention layers, and with far fewer trainable parameters. With much fewer training parameters and
+        higher representative power, our approach paves the way
+        for broader adoption of INR models for generative modeling tasks in complex domains. The code is available at
+        https://github.com/Rajhans0/Poly_INR
     """
 
     top_k = 10
@@ -246,5 +278,20 @@ if __name__ == "__main__":
     )
 
     for idx, score, text in top_papers:
-        title = text.split('\n')[0].strip()
+        title = text.split("\n")[0].strip()
+        print(f"Title: '{title}'")
+
+    similarity_finder_cached = PaperSimilarityFinder(
+        dataset,
+        method=method,
+        model_name=model_name,
+        embeddings_cache_path=embeddings_dir,
+    )
+
+    top_papers_cached = similarity_finder_cached.find_similar_papers(
+        my_title, my_abstract, top_k=top_k
+    )
+
+    for idx, score, text in top_papers_cached:
+        title = text.split("\n")[0].strip()
         print(f"Title: '{title}'")
