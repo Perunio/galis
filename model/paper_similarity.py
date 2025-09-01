@@ -234,13 +234,29 @@ class PaperSimilarityFinder:
             "sample_cited_papers": cited_papers_text,
         }
 
+    def compare_methods(self, title: str, abstract: str, top_k: int = 5):
+        """Compare TF-IDF vs sentence embeddings"""
+        if not hasattr(self, 'corpus_vectors'):
+            self._setup_tfidf()
+        if not hasattr(self, 'corpus_embeddings'):
+            self._setup_sentence_embeddings()
+
+        query = f"{title}\n{abstract}"
+
+        tfidf_results = self._find_similar_tfidf(query, top_k)
+        sent_results = self._find_similar_sentence_transformer(query, top_k)
+
+        return {
+            'tfidf': tfidf_results,
+            'sentence_transformer': sent_results
+        }
 
 if __name__ == "__main__":
     dataset = OGBNLinkPredDataset()
 
     model_name = "all-mpnet-base-v2"
     method = "sentence_transformer"
-    embeddings_dir = "embeddings_cache"
+    embeddings_dir = "../embeddings_cache"
 
     similarity_finder = PaperSimilarityFinder(
         dataset,
@@ -249,25 +265,22 @@ if __name__ == "__main__":
         embeddings_cache_path=embeddings_dir,
     )
 
-    my_title = "Polynomial Implicit Neural Representations For Large Diverse Datasets"
+    my_title = "PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation"
     my_abstract = """
-        Implicit neural representations (INR) have gained significant popularity for signal and image representation for
-        many end-tasks, such as superresolution, 3D modeling, and
-        more. Most INR architectures rely on sinusoidal positional
-        encoding, which accounts for high-frequency information in
-        data. However, the finite encoding size restricts the model’s
-        representational power. Higher representational power is
-        needed to go from representing a single given image to representing large and diverse datasets. Our approach addresses
-        this gap by representing an image with a polynomial function
-        and eliminates the need for positional encodings. Therefore,
-        to achieve a progressively higher degree of polynomial representation, we use element-wise multiplications between
-        features and affine-transformed coordinate locations after
-        every ReLU layer. The proposed method is evaluated qualitatively and quantitatively on large datasets like ImageNet.
-        The proposed Poly-INR model performs comparably to stateof-the-art generative models without any convolution, 
-        normalization, or self-attention layers, and with far fewer trainable parameters. With much fewer training parameters and
-        higher representative power, our approach paves the way
-        for broader adoption of INR models for generative modeling tasks in complex domains. The code is available at
-        https://github.com/Rajhans0/Poly_INR
+        Point cloud is an important type of geometric data
+        structure. Due to its irregular format, most researchers
+        transform such data to regular 3D voxel grids or collections
+        of images. This, however, renders data unnecessarily
+        voluminous and causes issues. In this paper, we design a
+        novel type of neural network that directly consumes point
+        clouds, which well respects the permutation invariance of
+        points in the input. Our network, named PointNet, provides a unified architecture for applications ranging from
+        object classification, part segmentation, to scene semantic
+        parsing. Though simple, PointNet is highly efficient and
+        effective. Empirically, it shows strong performance on
+        par or even better than state of the art. Theoretically,
+        we provide analysis towards understanding of what the
+        network has learnt and why the network is r
     """
 
     top_k = 10
@@ -295,3 +308,5 @@ if __name__ == "__main__":
     for idx, score, text in top_papers_cached:
         title = text.split("\n")[0].strip()
         print(f"Title: '{title}'")
+
+
