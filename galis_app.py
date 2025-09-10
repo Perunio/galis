@@ -2,7 +2,10 @@ from pathlib import Path
 import streamlit as st
 from dataset.ogbn_link_pred_dataset import OGBNLinkPredDataset
 from model.paper_similarity import PaperSimilarityFinder
-from llm.related_work_generator import generate_related_work
+from llm.related_work_generator import (
+    generate_related_work,
+    create_related_work_pipeline,
+)
 
 
 @st.cache_resource
@@ -17,13 +20,16 @@ def load_similarity_finder():
         model_name=model_name,
         embeddings_cache_path=embeddings_dir,
     )
-    return similarity_finder, dataset
+
+    pipeline = create_related_work_pipeline()
+
+    return pipeline, similarity_finder, dataset
 
 
 def format_top_k_predictions_from_similarity(similar_papers: list) -> str:
     markdown_list = []
     for i, (idx, score, text) in enumerate(similar_papers):
-        title = text.split('\n')[0].strip()
+        title = text.split("\n")[0].strip()
         markdown_list.append(f"{i + 1}. **{title}** (Similarity: {score:.4f})")
     return "\n".join(markdown_list)
 
@@ -41,7 +47,7 @@ def app():
     if "abstract_text" not in st.session_state:
         st.session_state.abstract_text = ""
 
-    similarity_finder, dataset = load_similarity_finder()
+    pipeline, similarity_finder, dataset = load_similarity_finder()
 
     col1, col2 = st.columns(2, gap="large")
 
@@ -105,9 +111,11 @@ def app():
                     similar_papers = similarity_finder.find_similar_papers(
                         title=abstract_title,
                         abstract=abstract_input,
-                        top_k=num_citations
+                        top_k=num_citations,
                     )
-                    references = format_top_k_predictions_from_similarity(similar_papers)
+                    references = format_top_k_predictions_from_similarity(
+                        similar_papers
+                    )
                     st.session_state.references = references
 
                 with references_placeholder.container():
@@ -118,6 +126,7 @@ def app():
                 with related_work_placeholder.container():
                     with st.spinner("Generating related work section..."):
                         related_work = generate_related_work(
+                            pipeline,
                             st.session_state.abstract_title,
                             st.session_state.abstract_text,
                             st.session_state.references,
@@ -139,3 +148,4 @@ def app():
 
 if __name__ == "__main__":
     app()
+
