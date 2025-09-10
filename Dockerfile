@@ -14,6 +14,7 @@ COPY model ./model
 COPY dataset ./dataset
 COPY predictor ./predictor
 COPY llm ./llm
+COPY embeddings_cache ./embeddings_cache
 
 ENV GOOGLE_API_KEY=""
 

@@ -76,14 +76,10 @@ def check_api_key():
 def create_related_work_pipeline():
     """Creates a ready-to-use pipeline for generating the Related Work section."""
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-exp",
-        temperature=0.3
-    )
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", temperature=0.3)
 
     prompt = PromptTemplate(
-        input_variables=["title", "abstract", "citations"],
-        template=PROMPT_TEXT
+        input_variables=["title", "abstract", "citations"], template=PROMPT_TEXT
     )
 
     parser = StrOutputParser()
@@ -93,7 +89,7 @@ def create_related_work_pipeline():
     return chain
 
 
-def generate_related_work(title:str, abstract:str, citations_text: str) -> str:
+def generate_related_work(title: str, abstract: str, citations_text: str) -> str:
     """
     Main function - pass title, abstract, and citations, get Related Work
 
@@ -106,11 +102,9 @@ def generate_related_work(title:str, abstract:str, citations_text: str) -> str:
         The generated Related Work section
     """
     pipeline = create_related_work_pipeline()
-    result = pipeline.invoke({
-        "title": title,
-        "abstract": abstract,
-        "citations": citations_text
-    })
+    result = pipeline.invoke(
+        {"title": title, "abstract": abstract, "citations": citations_text}
+    )
     return result
 
 
