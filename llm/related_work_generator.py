@@ -74,8 +74,6 @@ def check_api_key():
 
 
 def create_related_work_pipeline():
-    """Creates a ready-to-use pipeline for generating the Related Work section."""
-
     llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-exp", temperature=0.3)
 
     prompt = PromptTemplate(
@@ -89,19 +87,9 @@ def create_related_work_pipeline():
     return chain
 
 
-def generate_related_work(title: str, abstract: str, citations_text: str) -> str:
-    """
-    Main function - pass title, abstract, and citations, get Related Work
-
-    Args:
-        title: The paper's title
-        abstract: The paper's abstract
-        citations_text: Text with citations (can be a list or a string)
-
-    Returns:
-        The generated Related Work section
-    """
-    pipeline = create_related_work_pipeline()
+def generate_related_work(
+    pipeline, title: str, abstract: str, citations_text: str
+) -> str:
     result = pipeline.invoke(
         {"title": title, "abstract": abstract, "citations": citations_text}
     )
@@ -135,7 +123,8 @@ Top 5 Citation Predictions:
     print("-" * 50)
 
     try:
-        related_work = generate_related_work(title, abstract, citations)
+        pipeline = create_related_work_pipeline()
+        related_work = generate_related_work(pipeline, title, abstract, citations)
         print(related_work)
     except Exception as e:
         print(f"Error: {e}")
