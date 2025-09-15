@@ -30,18 +30,41 @@ def format_top_k_predictions_from_similarity(similar_papers: list) -> str:
     markdown_list = []
     for i, (idx, score, text) in enumerate(similar_papers):
         title = text.split("\n")[0].strip()
-        markdown_list.append(f"{i + 1}. **{title}** (Similarity: {score:.4f})")
+        markdown_list.append(f"{i + 1}. {title} (Similarity: {score:.4f})")
     return "\n".join(markdown_list)
+
+
+def process_uploaded_file():
+    try:
+        uploaded_file = st.session_state.file_uploader
+        if uploaded_file is not None:
+            content = uploaded_file.getvalue().decode("utf-8").splitlines()
+            st.session_state.abstract_title = content[0] if content else ""
+            st.session_state.abstract_text = (
+                "\n".join(content[1:]) if len(content) > 1 else ""
+            )
+    except Exception as e:
+        st.error(f"Error processing file: {e}")
 
 
 def app():
     st.set_page_config(page_title="Galis", layout="wide")
     st.title("Galis")
+    with st.popover("What is Galis?"):
+        st.markdown(
+            """GALIS is a web-based application designed to streamline and improve the creation of related
+        work and references sections in computer science research papers. It leverages an existing semantic graph
+        that captures the relationships and core concepts among cited papers to guide language model outputs.
+        The primary objective is to provide a practical tool that helps researchers generate high-quality, coherent
+        related work and references sections, making the process of synthesizing literature more efficient and
+        insightful.
+        """
+        )
 
     if "references" not in st.session_state:
-        st.session_state.references = None
+        st.session_state.references = ""
     if "related_work" not in st.session_state:
-        st.session_state.related_work = None
+        st.session_state.related_work = ""
     if "abstract_title" not in st.session_state:
         st.session_state.abstract_title = ""
     if "abstract_text" not in st.session_state:
@@ -57,37 +80,25 @@ def app():
 
     with col1:
         st.header("Abstract Title")
-        abstract_title = st.text_input(
-            "Paste your title here",
-            st.session_state.abstract_title,
-            key="abstract_title_input",
-            label_visibility="collapsed",
+        st.text_input(
+            "Paste your title here", key="abstract_title", label_visibility="collapsed"
         )
 
         st.header("Abstract Text")
-        abstract_input = st.text_area(
+        st.text_area(
             "Paste your abstract here",
-            st.session_state.abstract_text,
-            key="abstract_text_input",
-            height=100,
+            key="abstract_text",
+            height=150,
             label_visibility="collapsed",
         )
 
-        st.write("...or **upload** a .txt file (first line = title, rest = abstract)")
-        uploaded_file = st.file_uploader(
-            "Drag and drop file here", type=["txt"], help="Limit 200MB per file • TXT"
+        st.file_uploader(
+            "Upload a .txt file here (first line = title, rest = abstract)",
+            type=["txt"],
+            help="Limit 200MB per file • TXT",
+            key="file_uploader",
+            on_change=process_uploaded_file,
         )
-
-        if uploaded_file is not None:
-            content = uploaded_file.getvalue().decode("utf-8").splitlines()
-            st.session_state.abstract_title = content[0] if content else ""
-            st.session_state.abstract_text = (
-                "\n".join(content[1:]) if len(content) > 1 else ""
-            )
-            st.rerun()
-
-        st.session_state.abstract_title = abstract_title
-        st.session_state.abstract_text = abstract_input
 
         num_citations = st.number_input(
             "Number of suggestions",
@@ -99,53 +110,76 @@ def app():
         )
 
         if st.button("Suggest References and related work", type="primary"):
-            if not abstract_title.strip() or not abstract_input.strip():
+            if (
+                not st.session_state.abstract_title.strip()
+                or not st.session_state.abstract_text.strip()
+            ):
                 st.warning("Please provide both a title and an abstract.")
             else:
-                st.session_state.references = None
-                st.session_state.related_work = None
+                st.session_state.references = ""
+                st.session_state.related_work = ""
                 references_placeholder.empty()
                 related_work_placeholder.empty()
 
-                with st.spinner("Analyzing abstract and predicting references..."):
-                    similar_papers = similarity_finder.find_similar_papers(
-                        title=abstract_title,
-                        abstract=abstract_input,
-                        top_k=num_citations,
-                    )
-                    references = format_top_k_predictions_from_similarity(
-                        similar_papers
-                    )
-                    st.session_state.references = references
+                with references_placeholder:
+                    with st.spinner("Analyzing abstract and predicting references..."):
+                        similar_papers = similarity_finder.find_similar_papers(
+                            title=st.session_state.abstract_title,
+                            abstract=st.session_state.abstract_text,
+                            top_k=num_citations,
+                        )
+                        st.session_state.references = (
+                            format_top_k_predictions_from_similarity(similar_papers)
+                        )
 
                 with references_placeholder.container():
                     st.header("Suggested References")
-                    with st.container(height=200):
-                        st.markdown(st.session_state.references, unsafe_allow_html=True)
+                    st.text_area(
+                        "References",
+                        value=st.session_state.references,
+                        height=150,
+                        label_visibility="collapsed",
+                    )
 
-                with related_work_placeholder.container():
+                with related_work_placeholder:
                     with st.spinner("Generating related work section..."):
-                        related_work = generate_related_work(
+                        st.session_state.related_work = generate_related_work(
                             pipeline,
                             st.session_state.abstract_title,
                             st.session_state.abstract_text,
                             st.session_state.references,
                         )
-                        st.session_state.related_work = related_work
+
+                with related_work_placeholder.container():
+                    st.header("Suggested Related Works")
+                    st.text_area(
+                        "Related Works",
+                        value=st.session_state.related_work,
+                        height=300,
+                        label_visibility="collapsed",
+                    )
 
     if st.session_state.references:
         with references_placeholder.container():
             st.header("Suggested References")
-            with st.container(height=200):
-                st.markdown(st.session_state.references, unsafe_allow_html=True)
-
+            st.text_area(
+                "References",
+                value=st.session_state.references,
+                height=150,
+                label_visibility="collapsed",
+                key="ref_output",
+            )
     if st.session_state.related_work:
         with related_work_placeholder.container():
             st.header("Suggested Related Works")
-            with st.container(height=200):
-                st.markdown(st.session_state.related_work, unsafe_allow_html=True)
+            st.text_area(
+                "Related Works",
+                value=st.session_state.related_work,
+                height=300,
+                label_visibility="collapsed",
+                key="rw_output",
+            )
 
 
 if __name__ == "__main__":
     app()
-
