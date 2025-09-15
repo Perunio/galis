@@ -52,12 +52,45 @@ def app():
     st.title("Galis")
     with st.popover("What is Galis?"):
         st.markdown(
-            """GALIS is a web-based application designed to streamline and improve the creation of related
-        work and references sections in computer science research papers. It leverages an existing semantic graph
-        that captures the relationships and core concepts among cited papers to guide language model outputs.
-        The primary objective is to provide a practical tool that helps researchers generate high-quality, coherent
-        related work and references sections, making the process of synthesizing literature more efficient and
+            """
+        ### About GALIS
+
+        **GALIS** is a web-based application designed to streamline and improve the creation of related work and 
+        references sections for research papers. It leverages an existing semantic graph that captures the 
+        relationships and core concepts among cited papers to guide language model outputs.
+        
+        ### Objective
+        The primary objective is to provide a practical tool that helps researchers generate high-quality, coherent 
+        related work and references sections, making the process of synthesizing literature more efficient and 
         insightful.
+        
+        ---
+        
+        ### How to Use GALIS
+        
+        #### Option 1: Manual Input
+        1. **Enter your paper title** in the "Abstract Title" field
+        2. **Paste your abstract** in the "Abstract Text" area
+        3. **Set the number of suggestions** you want (1-100 papers)
+        4. **Click "Suggest References and related work"**
+        
+        #### Option 2: File Upload
+        1. **Prepare a .txt file** with:
+           - **First line**: Your paper title
+           - **Remaining lines**: Your abstract text
+        2. **Upload the file** using the file uploader
+        3. **Set the number of suggestions** you want (1-100 papers)
+        4. **Click "Suggest References and related work"**
+        
+        #### What You'll Get
+        - **Suggested References**: A curated list of relevant papers based on semantic similarity
+        - **Related Work Section**: An automatically generated related work section that synthesizes the suggested 
+        papers
+        - **Regeneration Option**: You can regenerate the related work section if needed
+        
+        ---
+        
+        *Note: File uploads are limited to 200MB and must be in .txt format* 
         """
         )
 
@@ -73,10 +106,6 @@ def app():
     pipeline, similarity_finder, dataset = load_similarity_finder()
 
     col1, col2 = st.columns(2, gap="large")
-
-    with col2:
-        references_placeholder = st.empty()
-        related_work_placeholder = st.empty()
 
     with col1:
         st.header("Abstract Title")
@@ -116,51 +145,24 @@ def app():
             ):
                 st.warning("Please provide both a title and an abstract.")
             else:
-                st.session_state.references = ""
+                st.session_state.references = "LOADING"
                 st.session_state.related_work = ""
-                references_placeholder.empty()
-                related_work_placeholder.empty()
 
-                with references_placeholder:
-                    with st.spinner("Analyzing abstract and predicting references..."):
-                        similar_papers = similarity_finder.find_similar_papers(
-                            title=st.session_state.abstract_title,
-                            abstract=st.session_state.abstract_text,
-                            top_k=num_citations,
-                        )
-                        st.session_state.references = (
-                            format_top_k_predictions_from_similarity(similar_papers)
-                        )
+    with col2:
+        if st.session_state.references == "LOADING":
+            with st.spinner("Analyzing abstract and predicting references..."):
+                similar_papers = similarity_finder.find_similar_papers(
+                    title=st.session_state.abstract_title,
+                    abstract=st.session_state.abstract_text,
+                    top_k=num_citations,
+                )
+                st.session_state.references = format_top_k_predictions_from_similarity(
+                    similar_papers
+                )
+                st.session_state.related_work = "LOADING"
+                st.rerun()
 
-                with references_placeholder.container():
-                    st.header("Suggested References")
-                    st.text_area(
-                        "References",
-                        value=st.session_state.references,
-                        height=150,
-                        label_visibility="collapsed",
-                    )
-
-                with related_work_placeholder:
-                    with st.spinner("Generating related work section..."):
-                        st.session_state.related_work = generate_related_work(
-                            pipeline,
-                            st.session_state.abstract_title,
-                            st.session_state.abstract_text,
-                            st.session_state.references,
-                        )
-
-                with related_work_placeholder.container():
-                    st.header("Suggested Related Works")
-                    st.text_area(
-                        "Related Works",
-                        value=st.session_state.related_work,
-                        height=300,
-                        label_visibility="collapsed",
-                    )
-
-    if st.session_state.references:
-        with references_placeholder.container():
+        if st.session_state.references not in ["", "LOADING"]:
             st.header("Suggested References")
             st.text_area(
                 "References",
@@ -169,16 +171,30 @@ def app():
                 label_visibility="collapsed",
                 key="ref_output",
             )
-    if st.session_state.related_work:
-        with related_work_placeholder.container():
+
             st.header("Suggested Related Works")
-            st.text_area(
-                "Related Works",
-                value=st.session_state.related_work,
-                height=300,
-                label_visibility="collapsed",
-                key="rw_output",
-            )
+
+            if st.session_state.related_work == "LOADING":
+                with st.spinner("Generating related work section..."):
+                    st.session_state.related_work = generate_related_work(
+                        pipeline,
+                        st.session_state.abstract_title,
+                        st.session_state.abstract_text,
+                        st.session_state.references,
+                    )
+                    st.rerun()
+            else:
+                st.text_area(
+                    "Related Works",
+                    value=st.session_state.related_work,
+                    height=300,
+                    label_visibility="collapsed",
+                    key="rw_output",
+                )
+
+            if st.button("Regenerate Related Works"):
+                st.session_state.related_work = "LOADING"
+                st.rerun()
 
 
 if __name__ == "__main__":
