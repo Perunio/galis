@@ -47,12 +47,7 @@ def process_uploaded_file():
         st.error(f"Error processing file: {e}")
 
 
-def app():
-    st.set_page_config(page_title="Galis", layout="wide")
-    st.title("Galis")
-    with st.popover("What is Galis?"):
-        st.markdown(
-            """
+GALIS_DESCRIPTION = """
         ### About GALIS
 
         **GALIS** is a web-based application designed to streamline and improve the creation of related work and 
@@ -92,7 +87,13 @@ def app():
         
         *Note: File uploads are limited to 200MB and must be in .txt format* 
         """
-        )
+
+
+def app():
+    st.set_page_config(page_title="Galis", layout="wide")
+    st.title("Galis")
+    with st.popover("What is Galis?"):
+        st.markdown(GALIS_DESCRIPTION)
 
     if "references" not in st.session_state:
         st.session_state.references = ""
