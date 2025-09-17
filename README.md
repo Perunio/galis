@@ -1,11 +1,15 @@
 # Galis
 
-![alt text](app.png)
+![alt text](app_.png)
 
 ## Project Description
 <strong>GALIS (Graph-Aware Language Intelligence System for Research Synthesis)</strong> is a web-based application designed to streamline and improve the creation of related work and references sections in computer science research papers. It leverages an existing semantic graph that captures the relationships and core concepts among cited papers to guide language model outputs. 
 
 <strong>The primary objective</strong> is to provide a practical tool that helps researchers generate high-quality, coherent related work and references sections, making the process of synthesizing literature more efficient and insightful.**
+
+## Deployed Demo
+
+A publicly deployed demo for the <strong>GALIS</strong> (Graph-Aware Language Intelligence System for Research Synthesis): https://huggingface.co/spaces/Perunio/galis
 
 ## Dataset Information
 <strong>GALIS</strong> utilizes the <strong>OGBN-ArXiv (Open Graph Benchmark)</strong> dataset. This benchmark dataset represents a citation network of computer science papers from arXiv, providing node features, citation edges, and research area labels. It is used for training and evaluation within the project to ensure the semantic graph accurately captures the intricate relationships within CS literature.
@@ -64,3 +68,10 @@ This command will run demo on ```Network URL: http://172.20.139.226:8501```
 ```bash
 make demo
 ```
+
+### Created by
+
+- [Remigiusz Sęk](<https://github.com/remigiuszsek>)
+- [Kacper Gutowski](<https://github.com/Perunio>)
+- [Dawid Koterwas](<https://github.com/Kiwinicki>)
+- [Andrii Norets](<https://github.com/AndriiNorets>)
