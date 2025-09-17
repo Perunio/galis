@@ -236,9 +236,9 @@ class PaperSimilarityFinder:
 
     def compare_methods(self, title: str, abstract: str, top_k: int = 5):
         """Compare TF-IDF vs sentence embeddings"""
-        if not hasattr(self, 'corpus_vectors'):
+        if not hasattr(self, "corpus_vectors"):
             self._setup_tfidf()
-        if not hasattr(self, 'corpus_embeddings'):
+        if not hasattr(self, "corpus_embeddings"):
             self._setup_sentence_embeddings()
 
         query = f"{title}\n{abstract}"
@@ -246,10 +246,8 @@ class PaperSimilarityFinder:
         tfidf_results = self._find_similar_tfidf(query, top_k)
         sent_results = self._find_similar_sentence_transformer(query, top_k)
 
-        return {
-            'tfidf': tfidf_results,
-            'sentence_transformer': sent_results
-        }
+        return {"tfidf": tfidf_results, "sentence_transformer": sent_results}
+
 
 if __name__ == "__main__":
     dataset = OGBNLinkPredDataset()
@@ -265,7 +263,9 @@ if __name__ == "__main__":
         embeddings_cache_path=embeddings_dir,
     )
 
-    my_title = "PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation"
+    my_title = (
+        "PointNet: Deep Learning on Point Sets for 3D Classification and Segmentation"
+    )
     my_abstract = """
         Point cloud is an important type of geometric data
         structure. Due to its irregular format, most researchers
@@ -308,5 +308,3 @@ if __name__ == "__main__":
     for idx, score, text in top_papers_cached:
         title = text.split("\n")[0].strip()
         print(f"Title: '{title}'")
-
-

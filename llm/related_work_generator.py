@@ -59,8 +59,8 @@ the novelty and importance of the user's project.
 Use appropriate terminology and focus on concepts, methods, and challenges relevant to that particular field of study.
 
 7.  **Output Format:** Generate only the text for the "Related Work" section. Do not include headers like 
-"INSTRUCTIONS," "PAPER TITLE," or "PROVIDED CITATIONS" in the final output. The entire response should be the 
-section text itself, ready to be inserted into an academic paper.
+"INSTRUCTIONS" "PAPER TITLE", "RELATED WORK" or "PROVIDED CITATIONS" in the final output. Do not use markdown syntax.
+The entire response should be the section text itself, ready to be inserted into an academic paper.
 """
 
 
